@@ -1,58 +1,101 @@
-#pragma once
 #include "Buffer.h"
+#include <assert.h>
 
-CBuffer::CBuffer(uint32_t size) :m_bufferbegin(0), m_bufferend(0), m_realSize(0), m_bufferlenght(size) {
-    m_buffer = new char[m_bufferlenght];
+//源文件实现
+CBuffer::CBuffer(uint32_t bufSize)
+{
+	m_writePos = 0;
+	m_readPos = 0;
+	m_readableSize = 0;
+	m_maxBufSize = bufSize;
+	m_buf = new char[m_maxBufSize];
+	m_packHeadLength = sizeof(EleHeader);//EleHeader为"你自己定义的数据包头"。
 }
 
-CBuffer::~CBuffer() {
-    if (nullptr != m_buffer) {
-        delete[] m_buffer;
-        m_buffer = nullptr;
-    }
+CBuffer::~CBuffer()
+{
+	if (m_buf)
+	{
+		delete[] m_buf;
+		m_buf = NULL;
+	}
 }
 
-uint32_t CBuffer::getCanWriteSize() {
-    return m_bufferlenght - m_realSize;
+
+bool CBuffer::Empty()
+{
+	return m_readableSize == 0;
 }
 
-uint32_t CBuffer::getBuffer(char*& buffer) {
-    buffer = m_buffer;
-    return getCanWriteSize();
+int CBuffer::putData(char* data, int len)
+{
+	if (len <= 0)
+	{
+		return 0;
+	}
+	//判断队列的空闲区域大小
+	assert(m_readableSize >= 0 && m_readableSize <= m_maxBufSize);
+	m_mutex.lock();
+	int resLen = m_maxBufSize - m_readableSize;//可写的总字节数
+
+	if (len > resLen)
+	{
+		len = resLen;
+	}
+
+	//按字节拷贝
+	for (int i = 0; i < len; i++)
+	{
+		m_buf[m_writePos] = data[i];
+		//注意这里不能用rear++,既然是环形缓冲区，如果填充到底部之后，底部的索引要回到头部
+		m_writePos = (m_writePos + 1) % m_maxBufSize;
+	}
+	m_readableSize += len;	//可读字节数 + len
+	m_mutex.unlock();
+	return len;
 }
 
-uint32_t CBuffer::getCanReadSize() {
-    return m_realSize;
+int CBuffer::getData(char* buf, int len)
+{
+	if (len <= 0)
+	{
+		return 0;
+	}
+	assert(m_readableSize >= 0);
+	m_mutex.lock();
+	if (m_readableSize < len)
+	{
+		len = m_readableSize;
+	}
+
+	int temp = m_readPos;//获取数据的时候不能改变头部索引的值，全部处理完成之后才改变头部索引的位置
+	for (int i = 0; i < len; i++)
+	{
+		buf[i] = m_buf[temp];
+		//这里和上面一样，头部的索引也有可能跑到底部，得让它能跑回来
+		temp = (temp + 1) % m_maxBufSize;
+	}
+	m_readPos = (m_readPos + len) % m_maxBufSize;
+	m_readableSize -= len;	//可读字节数 - len
+	m_mutex.unlock();
+	return len;
 }
 
-void CBuffer::fillDate(uint32_t size) {
-    m_realSize += size;
-    if (m_bufferlenght - m_bufferend <= size)
-    {
-        size -= m_bufferlenght - m_bufferend;
-        m_bufferend = 0;
-    }
-    m_bufferend -= size;
+
+//返回缓存区中的可读字节数量
+int CBuffer::getBufReadSize()
+{
+	return m_readableSize;
 }
 
-void CBuffer::removeDate(uint32_t size) {
-    m_realSize -= size;
-    if (m_bufferlenght - m_bufferbegin <= size)
-    {
-        size -= m_bufferlenght - m_bufferbegin;
-        m_bufferbegin = 0;
-    }
-    m_bufferbegin += size;
-}
-
-bool CBuffer::HasData() const {
-    //判断是否有真正有意义的数据
-    if (m_realSize < 0)
-        return false;
-    //
-    if (m_realSize < (sizeof(int16_t) + sizeof(int16_t)))
-        return false;
-
-    return true;
+//提供给使用者的接口
+//重置缓冲区
+void CBuffer::resetBuffer()
+{
+	m_mutex.lock();
+	m_writePos = 0;
+	m_readPos = 0;
+	m_readableSize = 0;
+	m_mutex.unlock();
 }
 

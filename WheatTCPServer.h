@@ -9,6 +9,8 @@ const int port = 134567;
 class WheatTCPServer {
 public:
 	//WheatTCPServer() {};
+	using Socket2Name = std::map<SOCKET, std::string>;
+	using Name2Player = std::map<std::string, CPlayerObject>;
 
 	static WheatTCPServer* instance();
 
@@ -19,6 +21,8 @@ public:
 	void CloseServer();
 
 	void Run();
+
+	void HandleMessge(SOCKET socket);
 
 private:
 

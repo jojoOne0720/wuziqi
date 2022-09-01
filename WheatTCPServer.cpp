@@ -37,6 +37,10 @@ void WheatTCPServer::CloseServer() {
 	WSACleanup();
 }
 
+void WheatTCPServer::HandleMessge(SOCKET socket) {
+
+}
+
 void WheatTCPServer::Run()
 {
 	printf("Server Start to Run.\n");
@@ -67,11 +71,7 @@ void WheatTCPServer::Run()
 				int len = sizeof(sockaddr_in);
 
 				SOCKET clientSocket = accept(m_socket, (sockaddr*)&clientAddr, &len);
-
 				FD_SET(clientSocket, &fd);
-
-				printf("New Client %lld Joined  %s:%d\n", clientSocket, inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
-
 
 
 				if (selectRes <= 1) {
@@ -84,18 +84,15 @@ void WheatTCPServer::Run()
 					continue;
 				}
 				if (FD_ISSET(i, &fdTemp)) {
-					char buf[1024];
-					memset(buf, 0, 1024);
-					int recvRes = recv(i, buf, sizeof(buf) - 1, 0);
-					if (recvRes == SOCKET_ERROR || recvRes == 0) {
-						closesocket(i);
-						FD_CLR(i, &fd);
+					HandleMessge(fdTemp.fd_array[i]);
 
-						printf("Client %d Left.\n", i);
+					Socket2Name::iterator iter = m_mapSocket2Name.find(fdTemp.fd_array[i]);
+					if (iter == m_mapSocket2Name.end()) {
+						continue;
 					}
-					else {
-
-
+					Name2Player::iterator palyer = m_mapName2Player.find(iter->second);
+					if (palyer == m_mapName2Player.end()) {
+						continue;
 					}
 				}
 			}

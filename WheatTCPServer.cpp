@@ -1,6 +1,6 @@
 #include "WheatTCPServer.h"
 #include <iostream>
-
+#include "logger.h"
 #pragma comment(lib, "ws2_32.lib")
 
 WheatTCPServer* WheatTCPServer::m_myServer = nullptr;
@@ -39,12 +39,19 @@ void WheatTCPServer::CloseServer() {
 
 void WheatTCPServer::HandleMessge(SOCKET socket) {
 
+
+	//Socket2Name::iterator iter = m_mapSocket2Name.find(socket);
+	//if (iter == m_mapSocket2Name.end()) {
+	//}
+	//Name2Player::iterator palyer = m_mapName2Player.find(iter->second);
+	//if (palyer == m_mapName2Player.end()) {
+
+	//}
 }
 
 void WheatTCPServer::Run()
 {
-	printf("Server Start to Run.\n");
-
+	LOG(INFO) << "Server Start to Run";
 	//WheatChatRecorder wheatChatRecorder;
 
 	fd_set fd;
@@ -54,26 +61,26 @@ void WheatTCPServer::Run()
 	int fdMax = static_cast<int>(m_socket);
 
 	while (1) {
-		fd_set fdTemp = fd;
+		fd_set readSet = fd;
 
 		timeval tm;
 		tm.tv_sec = 10;
 		tm.tv_usec = 0;
 
-		int selectRes = select(fdMax, &fdTemp, NULL, NULL, &tm);
+		int selectRes = select(fdMax, &readSet, NULL, NULL, &tm);
 
 		// printf("selectRes = %d\n", selectRes);
 		// printf("FD_ISSET = %d\n", FD_ISSET(m_socket, &fdTemp));
 
 		if (selectRes > 0) {
-			if (FD_ISSET(m_socket, &fdTemp)) {
+			if (FD_ISSET(m_socket, &readSet)) {
 				sockaddr_in clientAddr;
 				int len = sizeof(sockaddr_in);
 
 				SOCKET clientSocket = accept(m_socket, (sockaddr*)&clientAddr, &len);
 				FD_SET(clientSocket, &fd);
-
-
+				CPlayerObject* newPlayer = new CPlayerObject(std::to_string(clientSocket), clientSocket);
+				m_mapSocket2Player[clientSocket] = newPlayer;
 				if (selectRes <= 1) {
 					continue;
 				}
@@ -83,17 +90,18 @@ void WheatTCPServer::Run()
 				if (i == m_socket) {
 					continue;
 				}
-				if (FD_ISSET(i, &fdTemp)) {
-					HandleMessge(fdTemp.fd_array[i]);
-
-					Socket2Name::iterator iter = m_mapSocket2Name.find(fdTemp.fd_array[i]);
-					if (iter == m_mapSocket2Name.end()) {
+				if (FD_ISSET(i, &readSet)) {
+					char buf[1024];
+					int recvRes = recv(readSet.fd_array[i], buf, 1024, 0);
+					if (recvRes == SOCKET_ERROR || recvRes == 0) {
+						closesocket(readSet.fd_array[i]);
+						FD_CLR(readSet.fd_array[i], &readSet);
+					}
+					std::map<SOCKET, CPlayerObject*>::iterator iter = m_mapSocket2Player.find(readSet.fd_array[i]);
+					if (iter == m_mapSocket2Player.end()) {
 						continue;
 					}
-					Name2Player::iterator palyer = m_mapName2Player.find(iter->second);
-					if (palyer == m_mapName2Player.end()) {
-						continue;
-					}
+					iter->second->RecvBuffer(buf, recvRes);
 				}
 			}
 		}

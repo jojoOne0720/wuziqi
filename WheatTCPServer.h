@@ -42,8 +42,9 @@ private:
 	//void SendBufferToFdSet(fd_set inputFdSet, int fdMax, const char* str);
 	//void SendBufferToFdSet(fd_set inputFdSet, int fdMax, const char* str, size_t len, SOCKET skipSocket = -1);
 
-	std::map<std::string, CPlayerObject> m_mapName2Player;
+	//std::map<std::string, CPlayerObject> m_mapName2Player;
 	std::map<SOCKET, std::string> m_mapSocket2Name;
+	std::map<SOCKET, CPlayerObject*> m_mapSocket2Player;//存放玩家的信息
 
 
 	WSADATA m_WSAData;

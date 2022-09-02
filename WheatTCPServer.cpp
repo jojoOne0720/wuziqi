@@ -14,7 +14,6 @@ WheatTCPServer* WheatTCPServer::instance() {
 
 
 bool WheatTCPServer::Init(int port) {
-	m_mapName2Player.clear();
 	m_mapSocket2Name.clear();
 	if (WSAStart() == false) {
 		return false;

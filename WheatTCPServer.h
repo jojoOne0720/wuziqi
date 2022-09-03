@@ -24,6 +24,8 @@ public:
 
 	void HandleMessge(SOCKET socket);
 
+	void SetSocketOpt(int socket);
+
 private:
 
 	// ·¢ËÍÖ¸Áî

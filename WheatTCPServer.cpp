@@ -28,6 +28,8 @@ bool WheatTCPServer::Init(int port) {
 	if (Listen() == false) {
 		return false;
 	}
+
+	SetSocketOpt(m_socket);
 	return true;
 }
 
@@ -62,11 +64,9 @@ void WheatTCPServer::Run()
 	while (1) {
 		fd_set readSet = fd;
 
-		timeval tm;
-		tm.tv_sec = 10;
-		tm.tv_usec = 0;
+		timeval time = { 0, 5000 };
 
-		int selectRes = select(fdMax, &readSet, NULL, NULL, &tm);
+		int selectRes = select(0, &readSet, NULL, NULL, &time);
 
 		// printf("selectRes = %d\n", selectRes);
 		// printf("FD_ISSET = %d\n", FD_ISSET(m_socket, &fdTemp));
@@ -80,16 +80,17 @@ void WheatTCPServer::Run()
 				FD_SET(clientSocket, &fd);
 				CPlayerObject* newPlayer = new CPlayerObject(std::to_string(clientSocket), clientSocket);
 				m_mapSocket2Player[clientSocket] = newPlayer;
+				LOG(INFO) << "client connect, sockoct_id:  " << clientSocket;
 				if (selectRes <= 1) {
 					continue;
 				}
 			}
 
 			for (int i = 0; i <= selectRes; i++) {
-				if (i == m_socket) {
+				if (readSet.fd_array[i] == m_socket) {
 					continue;
 				}
-				if (FD_ISSET(i, &readSet)) {
+				if (FD_ISSET(readSet.fd_array[i], &readSet)) {
 					char buf[1024];
 					int recvRes = recv(readSet.fd_array[i], buf, 1024, 0);
 					if (recvRes == SOCKET_ERROR || recvRes == 0) {
@@ -103,8 +104,33 @@ void WheatTCPServer::Run()
 					iter->second->RecvBuffer(buf, recvRes);
 				}
 			}
+
+			std::map<SOCKET, CPlayerObject*>::iterator iter = m_mapSocket2Player.begin();
+			for (; iter != m_mapSocket2Player.end();) {
+				iter->second->HandleMessge();
+				++iter;
+			}
 		}
 	}
+}
+
+void WheatTCPServer::SetSocketOpt(int socket) {
+	bool addr = true;
+	setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&addr, sizeof(addr));
+
+	int netTimeout = 3000;
+	setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, (const char*)&netTimeout, sizeof(netTimeout));
+	 //setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&netTimeout, sizeof(netTimeout));
+	 unsigned long ul=1;
+
+	int ref = ioctlsocket(socket, FIONBIO, (unsigned long*)&ul);
+	if (ref == -1){
+		LOG(INFO) << "SetSocketOpt erro";
+	}
+	// if(ret==SOCKET_ERROR)//ÉèÖÃÊ§°Ü
+	// {
+	//     std::cout<<"ioctlsocket erro"<<std::endl;
+	// }
 }
 
 //void WheatTCPServer::SendCommand(SOCKET destSocket, int sleeperIdWhoMakeThisCommand, const WheatCommand& command)
@@ -239,10 +265,10 @@ void WheatTCPServer::Run()
 
 bool WheatTCPServer::WSAStart() {
 	if (WSAStartup(MAKEWORD(2, 2), &m_WSAData) != 0) {
-		printf("WSAStartup Failed!\n");
+		LOG(INFO) << "WSAStartup Failed!";
 		return false;
 	}
-	printf("WSAStartup Succeed.\n");
+	LOG(INFO) << "WSAStartup Succeed.";
 	return true;
 }
 
@@ -250,7 +276,7 @@ bool WheatTCPServer::SocketInit()
 {
 	m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (m_socket == INVALID_SOCKET) {
-		printf("socket Error!! %d\n", WSAGetLastError());
+		LOG(INFO) << "socket Error!!" << WSAGetLastError();
 		WSACleanup();
 		return false;
 	}

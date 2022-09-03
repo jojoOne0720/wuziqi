@@ -49,4 +49,8 @@ public:
 
 	//»º³åÇøÊÇ·ñÎª¿Õ
 	bool Empty();
+
+	int getPackLen();
+
+	char* getBuf() { return m_buf; }
 };

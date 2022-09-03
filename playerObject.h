@@ -4,7 +4,7 @@
 #include <winsock.h>
 #include "Buffer.h"
 #include "struct.h"
-#define WHEATTCP_BUFFERSIZE 1024
+#define WHEATTCP_BUFFERSIZE 4396
 class CPlayerObject {
 private:
 	std::string m_name; //player_name
@@ -15,7 +15,9 @@ private:
 public:
 	CPlayerObject(std::string name, SOCKET id);
 
-	void SendMessge();
+	~CPlayerObject();
+
+	void SendMessge(CBuffer& sendBuffer);
 
 	uint32_t RecvBuffer(char* buf, int len);
 

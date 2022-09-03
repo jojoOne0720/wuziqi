@@ -27,6 +27,21 @@ bool CBuffer::Empty()
 	return m_readableSize == 0;
 }
 
+int  CBuffer::getPackLen() {
+	if (getBufReadSize() < sizeof(int)) {
+		return 0;
+	}
+
+	int len = 0;
+	memcpy((char*)&len, m_buf + m_readPos, sizeof(int));
+
+	if (m_readableSize < len) {
+		return 0;
+	}
+
+	return len;
+}
+
 int CBuffer::putData(char* data, int len)
 {
 	if (len <= 0)

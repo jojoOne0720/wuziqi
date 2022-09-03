@@ -78,9 +78,14 @@ void WheatTCPServer::Run()
 
 				SOCKET clientSocket = accept(m_socket, (sockaddr*)&clientAddr, &len);
 				FD_SET(clientSocket, &fd);
+				SetSocketOpt(clientSocket);
 				CPlayerObject* newPlayer = new CPlayerObject(std::to_string(clientSocket), clientSocket);
 				m_mapSocket2Player[clientSocket] = newPlayer;
+
 				LOG(INFO) << "client connect, sockoct_id:  " << clientSocket;
+				std::string str("Hello");
+				CBuffer sendBuffer(str.size());
+				send(clientSocket, str.data(), str.size(), 0);
 				if (selectRes <= 1) {
 					continue;
 				}
@@ -90,19 +95,26 @@ void WheatTCPServer::Run()
 				if (readSet.fd_array[i] == m_socket) {
 					continue;
 				}
-				if (FD_ISSET(readSet.fd_array[i], &readSet)) {
-					char buf[1024];
-					int recvRes = recv(readSet.fd_array[i], buf, 1024, 0);
-					if (recvRes == SOCKET_ERROR || recvRes == 0) {
-						closesocket(readSet.fd_array[i]);
-						FD_CLR(readSet.fd_array[i], &readSet);
-					}
-					std::map<SOCKET, CPlayerObject*>::iterator iter = m_mapSocket2Player.find(readSet.fd_array[i]);
-					if (iter == m_mapSocket2Player.end()) {
-						continue;
-					}
-					iter->second->RecvBuffer(buf, recvRes);
+				if (!FD_ISSET(readSet.fd_array[i], &readSet)) {
+					continue;
 				}
+
+				char buf[1024];
+				int recvRes = recv(readSet.fd_array[i], buf, 1024, 0);
+				if (recvRes == SOCKET_ERROR) {
+					continue;
+					//std::map<SOCKET, CPlayerObject*>::iterator iter = m_mapSocket2Player.find(readSet.fd_array[i]);
+					//if (iter != m_mapSocket2Player.end()) {
+					//	m_mapSocket2Player.erase(iter);
+					//}
+					//closesocket(readSet.fd_array[i]);
+					//FD_CLR(readSet.fd_array[i], &fd);
+				}
+				std::map<SOCKET, CPlayerObject*>::iterator iter = m_mapSocket2Player.find(readSet.fd_array[i]);
+				if (iter == m_mapSocket2Player.end()) {
+					continue;
+				}
+				iter->second->RecvBuffer(buf, recvRes);
 			}
 
 			std::map<SOCKET, CPlayerObject*>::iterator iter = m_mapSocket2Player.begin();

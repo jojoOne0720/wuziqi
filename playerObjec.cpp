@@ -33,10 +33,20 @@ void CPlayerObject::HandleMessge() {
 	std::memcpy((char*)&cmd, data + 4, 4);
 	switch (cmd) {
 	case::CMD::CMD_LOGIN: {
+		//std::string str("Hello");
+		//CBuffer sendBuffer(str.size());
+		//sendBuffer.putData((char*)str.data(), str.size());
+		//SendMessge(sendBuffer);
 		std::string str("Hello");
 		CBuffer sendBuffer(str.size());
-		sendBuffer.putData((char*)str.data(), str.size());
-		SendMessge(sendBuffer);
+		send(m_clientSocket, str.data(), str.size(), 0);
+	}
+	break;
+	case::CMD::CMD_LOGOUT: {
+		//std::string str("Hello");
+		//CBuffer sendBuffer(str.size());
+		//sendBuffer.putData((char*)str.data(), str.size());
+		//SendMessge(sendBuffer);
 	}
 	break;
 	default:

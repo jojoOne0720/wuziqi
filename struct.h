@@ -4,7 +4,7 @@
 // 消息类型
 enum CMD
 {
-	CMD_LOGIN,
+	CMD_LOGIN  = 1,
 	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
 	CMD_LOGOUT_RESULT,

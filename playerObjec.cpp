@@ -37,6 +37,11 @@ void CPlayerObject::HandleMessge() {
 		//CBuffer sendBuffer(str.size());
 		//sendBuffer.putData((char*)str.data(), str.size());
 		//SendMessge(sendBuffer);
+		int len = 0;
+		std::memcpy((char*)&len, data + 8, 4);
+		char name[1234];
+		std::memcpy(name, data + 8 + 4, len);
+		printf("name: %s\n", name);
 		std::string str("Hello");
 		CBuffer sendBuffer(str.size());
 		send(m_clientSocket, str.data(), str.size(), 0);
